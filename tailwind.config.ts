@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['DM Serif Display', 'serif'],
+        display: ['Playfair Display', 'serif'],
         brand: ['Russo One', 'sans-serif'],
         body: ['Inter', 'sans-serif'],
       },
