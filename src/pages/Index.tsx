@@ -334,8 +334,8 @@ const Index = () => {
           <div className="mt-6 grid grid-cols-4 gap-3 text-center animate-fade-in" style={{ animationDelay: "0.15s" }}>
             {[
               { icon: BarChart3, label: "Subject Bank\nFFIEC Report", tab: "ubpr" },
-              { icon: Users, label: "Peer Group\nAnalysis", tab: "peers" },
               { icon: Brain, label: "Detailed\nAnalysis", tab: "insights" },
+              { icon: Users, label: "Peer Group\nAnalysis", tab: "peers" },
               { icon: Globe, label: "Current Market\nIntelligence", tab: "market" },
             ].map(({ icon: Icon, label, tab }) => (
               <button
