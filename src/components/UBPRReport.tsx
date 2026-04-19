@@ -10,10 +10,11 @@ import UBPRReportPreview from "./UBPRReportPreview";
 interface UBPRReportProps {
   bankName: string;
   rssd?: string;
-  selectedQuarters?: string[];
+  selectedQuarter?: string | null;
+  onQuartersLoaded?: (dates: string[]) => void;
 }
 
-const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
+const UBPRReport = ({ bankName, rssd, selectedQuarter, onQuartersLoaded }: UBPRReportProps) => {
   const [quarters, setQuarters] = useState<UBPRPdfData[] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +32,7 @@ const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
         const data = await fetchUBPRData(rssd);
         if (cancelled) return;
         setQuarters(data);
+        onQuartersLoaded?.(data.map(q => q.report_date));
       } catch (err) {
         if (cancelled) return;
         console.error("Failed to fetch UBPR data:", err);
@@ -64,14 +66,20 @@ const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
     }
   };
 
-  const quarterLabel = quarters?.[0]?.report_date
-    ? (() => {
-        const d = new Date(quarters[0].report_date + "T00:00:00");
-        const m = d.getMonth();
-        const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
-        return `${q} ${d.getFullYear()}`;
-      })()
-    : null;
+  function toLabel(dateStr: string): string {
+    const d = new Date(dateStr + "T00:00:00");
+    const m = d.getMonth();
+    const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
+    return `${q} ${d.getFullYear()}`;
+  }
+
+  const quarterLabel = selectedQuarter
+    ? toLabel(selectedQuarter)
+    : quarters && quarters.length > 0
+      ? "All Quarters"
+      : null;
+
+  const selectedQuarterLabels = selectedQuarter ? [toLabel(selectedQuarter)] : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -114,7 +122,12 @@ const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
       )}
 
       {quarters && rssd && (
-        <UBPRReportPreview bankName={bankName} rssd={rssd} quarters={quarters} selectedQuarters={selectedQuarters} />
+        <UBPRReportPreview
+          bankName={bankName}
+          rssd={rssd}
+          quarters={quarters}
+          selectedQuarters={selectedQuarterLabels}
+        />
       )}
     </div>
   );

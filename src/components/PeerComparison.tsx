@@ -10,7 +10,7 @@ interface PeerComparisonProps {
   subjectBank: BankInfo;
   subjectMetrics: BankMetrics[]; // kept for interface compat
   peerBanks: BankInfo[];
-  selectedQuarters?: string[];
+  selectedQuarter?: string | null;
 }
 
 interface MetricDef {
@@ -40,8 +40,10 @@ function formatValue(raw: number | null | undefined, format: "ratio" | "dollar")
   return Math.round(raw / 1000).toLocaleString("en-US");
 }
 
-function getLatestMetrics(quarters: QuarterData[]): Record<string, number | null> {
-  return quarters[0]?.metrics ?? {};
+function getMetrics(quarters: QuarterData[], selectedDate?: string | null): Record<string, number | null> {
+  if (!quarters || quarters.length === 0) return {};
+  if (!selectedDate) return quarters[0]?.metrics ?? {};
+  return (quarters.find(q => q.report_date === selectedDate) ?? quarters[0])?.metrics ?? {};
 }
 
 const Shimmer = () => (
@@ -59,6 +61,7 @@ function computeSummary(
   subjectMap: Record<string, number | null>,
   peers: BankInfo[],
   peerDataMap: Record<string, PeerEntry>,
+  selectedQuarter?: string | null,
 ): SummaryItem[] {
   return METRICS.flatMap((metric) => {
     const subjectVal = subjectMap[metric.code] ?? null;
@@ -67,7 +70,7 @@ function computeSummary(
       .map((p) => {
         const e = peerDataMap[p.rssd];
         if (!e || e.length === 0) return null;
-        return getLatestMetrics(e)[metric.code] ?? null;
+        return getMetrics(e, selectedQuarter)[metric.code] ?? null;
       })
       .filter((v): v is number => v !== null);
     if (peerVals.length === 0) return [];
@@ -87,9 +90,10 @@ interface BarChartProps {
   subjectMap: Record<string, number | null> | null;
   peers: BankInfo[];
   peerDataMap: Record<string, PeerEntry>;
+  selectedQuarter?: string | null;
 }
 
-const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap }: BarChartProps) => {
+const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap, selectedQuarter }: BarChartProps) => {
   const banks: { name: string; val: number; isSubject: boolean }[] = [];
 
   const sv = subjectMap?.[metric.code] ?? null;
@@ -97,7 +101,7 @@ const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap }:
   for (const peer of peers) {
     const e = peerDataMap[peer.rssd];
     if (!e || e.length === 0) continue;
-    const v = getLatestMetrics(e)[metric.code] ?? null;
+    const v = getMetrics(e, selectedQuarter)[metric.code] ?? null;
     if (v !== null) banks.push({ name: peer.name, val: v, isSubject: false });
   }
 
@@ -136,7 +140,7 @@ const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap }:
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
+const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter }: PeerComparisonProps) => {
   const cache = useRef<Map<string, QuarterData[] | null>>(new Map());
   const [subjectData, setSubjectData] = useState<QuarterData[] | null | undefined>(undefined);
   const [peerDataMap, setPeerDataMap] = useState<Record<string, PeerEntry>>({});
@@ -195,13 +199,13 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
   const isLoadingAny =
     subjectData === undefined || peerBanks.some(p => peerDataMap[p.rssd] === undefined);
 
-  const subjectMetricsMap = subjectData ? getLatestMetrics(subjectData) : null;
+  const subjectMetricsMap = subjectData ? getMetrics(subjectData, selectedQuarter) : null;
 
   const summary = useMemo(() => {
     if (subjectData === undefined || peerBanks.some(p => peerDataMap[p.rssd] === undefined) || !subjectMetricsMap)
       return null;
-    return computeSummary(subjectMetricsMap, peerBanks, peerDataMap);
-  }, [subjectData, subjectMetricsMap, peerBanks, peerDataMap]);
+    return computeSummary(subjectMetricsMap, peerBanks, peerDataMap, selectedQuarter);
+  }, [subjectData, subjectMetricsMap, peerBanks, peerDataMap, selectedQuarter]);
 
   const strengths  = summary?.filter(s => s.pct <= 0.33) ?? [];
   const weaknesses = summary?.filter(s => s.pct >= 0.67) ?? [];
@@ -227,7 +231,8 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
         <div className="flex items-center gap-2">
           <h3 className="font-display text-lg text-foreground">Peer Comparison</h3>
           {subjectData && subjectData.length > 0 && (() => {
-            const d = new Date(subjectData[0].report_date + "T00:00:00");
+            const dateStr = selectedQuarter ?? subjectData[0].report_date;
+            const d = new Date(dateStr + "T00:00:00");
             const m = d.getMonth();
             const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
             return (
@@ -310,7 +315,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
               const peerVals = peerBanks.map(peer => {
                 const entry = peerDataMap[peer.rssd];
                 if (!entry) return null;
-                return getLatestMetrics(entry)[metric.code] ?? null;
+                return getMetrics(entry, selectedQuarter)[metric.code] ?? null;
               });
 
               const validPeerVals = peerVals.filter((v): v is number => v !== null);
@@ -354,7 +359,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
                     const entry = peerDataMap[peer.rssd];
                     const loading = entry === undefined;
                     const peerVal = entry && entry.length > 0
-                      ? (getLatestMetrics(entry)[metric.code] ?? null)
+                      ? (getMetrics(entry, selectedQuarter)[metric.code] ?? null)
                       : null;
                     return (
                       <TableCell key={peer.rssd} className="text-right tabular-nums text-xs py-2 px-4">
@@ -389,6 +394,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
                       subjectMap={subjectMetricsMap}
                       peers={peerBanks}
                       peerDataMap={peerDataMap}
+                      selectedQuarter={selectedQuarter}
                     />
                   </TableCell>
                 </TableRow>

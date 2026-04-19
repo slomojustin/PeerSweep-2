@@ -41,7 +41,21 @@ const Index = () => {
   const [marketIntelData, setMarketIntelData] = useState<MarketIntelData | null>(null);
   const [isMarketIntelLoading, setIsMarketIntelLoading] = useState(false);
   const [showPeerList, setShowPeerList] = useState(false);
+  const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
+  const [availableQuarters, setAvailableQuarters] = useState<string[]>([]);
   const { toast } = useToast();
+
+  function toQuarterLabel(dateStr: string): string {
+    const d = new Date(dateStr + "T00:00:00");
+    const m = d.getMonth();
+    const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
+    return `${q} ${d.getFullYear()}`;
+  }
+
+  function handleQuartersLoaded(dates: string[]) {
+    setAvailableQuarters(dates);
+    setSelectedQuarter(prev => prev ?? dates[0] ?? null);
+  }
 
   const selectedBank = subjectBank[0];
   const narratives = selectedBank && metrics.length >= 2 ? generateNarrative(selectedBank, metrics) : [];
@@ -145,6 +159,39 @@ const Index = () => {
               {ubprError}
             </div>
           )}
+          {availableQuarters.length > 1 && (activeTab === "ubpr" || activeTab === "peers") && (
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs text-muted-foreground font-medium">Period:</span>
+              {activeTab === "ubpr" && (
+                <button
+                  onClick={() => setSelectedQuarter(null)}
+                  className={cn(
+                    "text-xs rounded-full px-3 py-1 border font-medium transition-colors",
+                    selectedQuarter === null
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
+                  )}
+                >
+                  All
+                </button>
+              )}
+              {availableQuarters.map(date => (
+                <button
+                  key={date}
+                  onClick={() => setSelectedQuarter(date)}
+                  className={cn(
+                    "text-xs rounded-full px-3 py-1 border font-medium transition-colors",
+                    selectedQuarter === date
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
+                  )}
+                >
+                  {toQuarterLabel(date)}
+                </button>
+              ))}
+            </div>
+          )}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 h-14 rounded-xl p-1 bg-muted/60 gap-1">
               <TabsTrigger value="ubpr" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-background transition-all">
@@ -184,7 +231,12 @@ const Index = () => {
             </TabsList>
 
             <TabsContent value="ubpr" forceMount className="data-[state=inactive]:sr-only">
-              <UBPRReport bankName={selectedBank.name} rssd={selectedBank.rssd} selectedQuarters={[]} />
+              <UBPRReport
+                bankName={selectedBank.name}
+                rssd={selectedBank.rssd}
+                selectedQuarter={selectedQuarter}
+                onQuartersLoaded={handleQuartersLoaded}
+              />
             </TabsContent>
 
             <TabsContent value="insights" forceMount className="data-[state=inactive]:sr-only">
@@ -192,7 +244,7 @@ const Index = () => {
             </TabsContent>
 
             <TabsContent value="peers" forceMount className="data-[state=inactive]:sr-only">
-              <PeerComparison subjectBank={selectedBank} subjectMetrics={metrics} peerBanks={peerBanks} selectedQuarters={[]} />
+              <PeerComparison subjectBank={selectedBank} subjectMetrics={metrics} peerBanks={peerBanks} selectedQuarter={selectedQuarter} />
             </TabsContent>
 
             <TabsContent value="market" forceMount className="data-[state=inactive]:sr-only">
