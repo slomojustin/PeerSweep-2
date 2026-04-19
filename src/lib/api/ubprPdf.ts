@@ -104,6 +104,20 @@ export async function fetchUBPRData(rssd: string): Promise<QuarterData[]> {
       if (metrics['cost_of_funds'] !== null && (metrics['cost_of_funds'] as number) > 1000) {
         metrics['cost_of_funds'] = null;
       }
+      // ~24% of rows have return_on_equity stored as 0.0 (missing data placeholder).
+      // Derive ROE = ROA × (Assets / Equity) when the components are available.
+      if ((metrics['return_on_equity'] as number) === 0) {
+        const roa = metrics['return_on_assets'] as number | null;
+        const assets = metrics['total_assets'] as number | null;
+        const equity = metrics['total_equity'] as number | null;
+        if (roa != null && assets != null && equity != null && equity > 0) {
+          const derived = roa * (assets / equity);
+          // Sanity-check: ROE should be positive and less than 200%
+          metrics['return_on_equity'] = (derived > 0 && derived < 200) ? derived : null;
+        } else {
+          metrics['return_on_equity'] = null;
+        }
+      }
     }
 
     // Translate snake_case keys → UBPR concept map codes, drop unmapped keys

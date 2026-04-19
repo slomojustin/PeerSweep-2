@@ -23,7 +23,7 @@ interface MetricDef {
 
 const METRICS: MetricDef[] = [
   { code: "CALC_ROA",  label: "Return on Assets",      format: "ratio",  higherGood: true  },
-  { code: "CALC_ROE",  label: "Return on Equity",       format: "ratio",  higherGood: true  },
+  // { code: "CALC_ROE", label: "Return on Equity", format: "ratio", higherGood: true }, // TODO: fix 0-value data issue post-demo
   { code: "CALC_NIM",  label: "Net Interest Margin",    format: "ratio",  higherGood: true  },
   { code: "CALC_EFF",  label: "Efficiency Ratio",       format: "ratio",  higherGood: false },
   { code: "CALC_NIS",  label: "Net Interest Spread",    format: "ratio",  higherGood: true  },

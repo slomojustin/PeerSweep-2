@@ -5,7 +5,7 @@ import type { BankInfo } from '@/data/bankData';
 // Metrics included in the peer comparison table, in display order
 const CONTEXT_METRICS: Array<{ code: string; label: string; format: 'ratio' | 'dollar'; higherGood: boolean }> = [
   { code: 'CALC_ROA',  label: 'Return on Assets',     format: 'ratio',  higherGood: true  },
-  { code: 'CALC_ROE',  label: 'Return on Equity',      format: 'ratio',  higherGood: true  },
+  // { code: 'CALC_ROE', label: 'Return on Equity', format: 'ratio', higherGood: true }, // TODO: fix 0-value data issue post-demo
   { code: 'CALC_NIM',  label: 'Net Interest Margin',   format: 'ratio',  higherGood: true  },
   { code: 'CALC_EFF',  label: 'Efficiency Ratio',      format: 'ratio',  higherGood: false },
   { code: 'CALC_COF',  label: 'Cost of Funds',         format: 'ratio',  higherGood: false },

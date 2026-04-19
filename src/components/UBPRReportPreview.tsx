@@ -43,7 +43,7 @@ type ColorHint = "higher-good" | "lower-good" | "none";
 
 const RATIO_COLOR_CONFIG: Record<string, { hint: ColorHint; greenThreshold: number; redThreshold: number }> = {
   CALC_ROA: { hint: "higher-good", greenThreshold: 1.0,  redThreshold: 0.5  },
-  CALC_ROE: { hint: "higher-good", greenThreshold: 8.0,  redThreshold: 4.0  },
+  // CALC_ROE: { hint: "higher-good", greenThreshold: 8.0, redThreshold: 4.0 }, // TODO: fix 0-value data issue post-demo
   CALC_NIM: { hint: "higher-good", greenThreshold: 3.0,  redThreshold: 2.0  },
   CALC_EFF: { hint: "lower-good",  greenThreshold: 60.0, redThreshold: 75.0 },
   UBPRE130: { hint: "lower-good",  greenThreshold: 0.5,  redThreshold: 1.5  },
@@ -70,7 +70,7 @@ function getRatioColorClass(code: string, raw: unknown): string {
 
 const KPI_TILES = [
   { label: "Return on Assets",    code: "CALC_ROA",  fmt: "ratio"  },
-  { label: "Return on Equity",    code: "CALC_ROE",  fmt: "ratio"  },
+  // { label: "Return on Equity", code: "CALC_ROE", fmt: "ratio" }, // TODO: fix 0-value data issue post-demo
   { label: "Net Interest Margin", code: "CALC_NIM",  fmt: "ratio"  },
   { label: "Efficiency Ratio",    code: "CALC_EFF",  fmt: "ratio"  },
   { label: "Total Assets",        code: "UBPR2170",  fmt: "dollar" },

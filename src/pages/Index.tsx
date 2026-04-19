@@ -16,14 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 import type { BankMetrics } from "@/data/bankData";
 import type { MarketIntelData } from "@/lib/api/marketIntel";
 
-// Hardcoded peer banks for quick testing — swap for any 6 banks you prefer
-const TEST_PEER_BANKS: BankInfo[] = [
-  { rssd: "852218",  name: "JPMORGAN CHASE BANK",    city: "Columbus",      state: "OH" },
-  { rssd: "480228",  name: "BANK OF AMERICA",         city: "Charlotte",     state: "NC" },
-  { rssd: "451965",  name: "WELLS FARGO BANK",        city: "Sioux Falls",   state: "SD" },
-  { rssd: "476810",  name: "CITIBANK",                city: "Sioux Falls",   state: "SD" },
-  { rssd: "504713",  name: "U.S. BANK",               city: "Cincinnati",    state: "OH" },
-  { rssd: "817824",  name: "PNC BANK",                city: "Wilmington",    state: "DE" },
+const DEMO_SUBJECT_BANK: BankInfo = { rssd: "962966", name: "SOFI BANK, NATIONAL ASSOCIATION", city: "Cottonwood Heights", state: "UT" };
+
+const DEMO_PEER_BANKS: BankInfo[] = [
+  { rssd: "2917317", name: "AXOS BANK",                              city: "San Diego", state: "CA" },
+  { rssd: "852218",  name: "JPMORGAN CHASE BANK, NATIONAL ASSOCIATION", city: "Columbus", state: "OH" },
+  { rssd: "3284070", name: "ALLY BANK",                              city: "Sandy",     state: "UT" },
+  { rssd: "112837",  name: "CAPITAL ONE, NATIONAL ASSOCIATION",      city: "Mc Lean",   state: "VA" },
+  { rssd: "264772",  name: "LENDINGCLUB BANK, NATIONAL ASSOCIATION", city: "Lehi",      state: "UT" },
+  { rssd: "3138146", name: "WESTERN ALLIANCE BANK",                  city: "Phoenix",   state: "AZ" },
 ];
 
 const Index = () => {
@@ -316,10 +317,10 @@ const Index = () => {
                   : `${peerBanks.length} of 6 minimum selected`}
               </p>
               <button
-                onClick={() => setPeerBanks(TEST_PEER_BANKS)}
-                className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+                onClick={() => { setSubjectBank([DEMO_SUBJECT_BANK]); setPeerBanks(DEMO_PEER_BANKS); }}
+                className="text-xs text-accent underline hover:text-accent/80 font-medium transition-colors"
               >
-                load 6 test banks
+                load demo preset
               </button>
               <button
                 onClick={() => { setBypassPeerMin(b => !b); setPeerBanks([]); }}

@@ -340,10 +340,12 @@ const AgentStreamPanel = ({
 const FlatResultsView = ({
   data,
   onRefresh,
+  onRunLive,
   isLoading,
 }: {
   data: MarketIntelData;
   onRefresh: () => void;
+  onRunLive: () => void;
   isLoading: boolean;
 }) => (
   <div className="space-y-8">
@@ -458,10 +460,16 @@ const FlatResultsView = ({
     )}
 
     <div className="text-center pt-2 space-y-3">
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading} className="gap-2">
-        {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-        Refresh Market Intel
-      </Button>
+      <div className="flex items-center justify-center gap-3">
+        <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading} className="gap-2">
+          {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+          Refresh
+        </Button>
+        <Button variant="outline" size="sm" onClick={onRunLive} disabled={isLoading} className="gap-2 border-accent/40 text-accent hover:bg-accent/10">
+          <RefreshCw className="h-3 w-3" />
+          Run Live
+        </Button>
+      </div>
       <div className="flex justify-center"><TinyFishBadge /></div>
     </div>
   </div>
@@ -508,7 +516,7 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
     );
   };
 
-  const handleFetch = async () => {
+  const handleFetch = async (bypassCache = false) => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
     setIsLoadingWithCallback(true);
@@ -549,6 +557,7 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
           // Auto-expand the panel when its results arrive
           setExpandedPanels(prev => new Set([...prev, index]));
         },
+        bypassCache,
       );
       // Mark any still-running agents done; split merged result by bank name
       setAgentStreams(prev => prev.map(s => {
@@ -650,13 +659,19 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
           <p className="text-sm text-muted-foreground">
             Scrape peer bank websites for deposit rates, search local news coverage, and scan social media for competitor marketing activity.
           </p>
-          <Button onClick={handleFetch} disabled={isLoading} className="gap-2">
-            {isLoading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />Gathering Market Intel…</>
-            ) : (
-              <><Globe className="h-4 w-4" />Retrieve Market Intel</>
-            )}
-          </Button>
+          <div className="flex items-center justify-center gap-3">
+            <Button onClick={() => handleFetch(false)} disabled={isLoading} className="gap-2">
+              {isLoading ? (
+                <><Loader2 className="h-4 w-4 animate-spin" />Gathering Market Intel…</>
+              ) : (
+                <><Globe className="h-4 w-4" />Retrieve Market Intel</>
+              )}
+            </Button>
+            <Button onClick={() => handleFetch(true)} disabled={isLoading} variant="outline" className="gap-2 border-accent/40 text-accent hover:bg-accent/10">
+              <RefreshCw className="h-4 w-4" />
+              Run Live
+            </Button>
+          </div>
         </Card>
       )}
 
@@ -741,7 +756,7 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
 
       {/* Flat cached results view */}
       {cachedResult && !showAgentView && (
-        <FlatResultsView data={cachedResult} onRefresh={handleFetch} isLoading={isLoading} />
+        <FlatResultsView data={cachedResult} onRefresh={() => handleFetch(false)} onRunLive={() => handleFetch(true)} isLoading={isLoading} />
       )}
     </div>
   );

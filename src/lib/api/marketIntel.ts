@@ -95,6 +95,7 @@ export const fetchMarketIntel = async (
   onRunIds?: (runIds: string[]) => void,
   onJobId?: (jobId: string) => void,
   onBankResult?: (index: number, data: MarketIntelData) => void,
+  bypassCache?: boolean,
 ): Promise<MarketIntelData> => {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
   const { data, error } = await supabase.functions.invoke<MarketIntelResponse>('fetch-market-intel', {
@@ -104,6 +105,7 @@ export const fetchMarketIntel = async (
       state: bank.state,
       city: bank.city,
       peerBanks: peerBanks.map(p => ({ name: p.name, rssd: p.rssd, city: p.city, state: p.state })),
+      bypassCache: bypassCache ?? false,
     },
   });
 

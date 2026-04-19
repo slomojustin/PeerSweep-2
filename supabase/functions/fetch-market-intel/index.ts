@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     // DEBUG — remove once deployment is confirmed
     console.log('FETCH_MARKET_INTEL_VERSION=parallel-peer-v1');
 
-    const { bankName, rssd, state, city, peerBanks } = await req.json();
+    const { bankName, rssd, state, city, peerBanks, bypassCache } = await req.json();
 
     if (!bankName || !rssd) {
       return new Response(
@@ -110,43 +110,47 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check cache: 24-hour TTL, keyed on subject RSSD + sorted peer RSSDs
-    const ttlExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { data: existingJob } = await supabase
-      .from('ffiec_report_jobs')
-      .select('id, status, result_metrics, completed_at')
-      .eq('cache_key', cacheKey)
-      .eq('report_type', 'market_intel')
-      .eq('status', 'completed')
-      .gt('completed_at', ttlExpiry)
-      .order('completed_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    if (!bypassCache) {
+      // Check cache: 24-hour TTL, keyed on subject RSSD + sorted peer RSSDs
+      const ttlExpiry = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: existingJob } = await supabase
+        .from('ffiec_report_jobs')
+        .select('id, status, result_metrics, completed_at')
+        .eq('cache_key', cacheKey)
+        .eq('report_type', 'market_intel')
+        .eq('status', 'completed')
+        .gt('completed_at', ttlExpiry)
+        .order('completed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-    if (existingJob?.result_metrics) {
-      console.log(`Market intel cache hit for ${bankName} (key: ${cacheKey})`);
-      const parsed = parseMarketIntelResult(existingJob.result_metrics);
-      return new Response(
-        JSON.stringify({ success: true, source: 'cache', status: 'completed', data: parsed }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
+      if (existingJob?.result_metrics) {
+        console.log(`Market intel cache hit for ${bankName} (key: ${cacheKey})`);
+        const parsed = parseMarketIntelResult(existingJob.result_metrics);
+        return new Response(
+          JSON.stringify({ success: true, source: 'cache', status: 'completed', data: parsed }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
 
-    // Check if there's already a processing job for this exact subject+peer combination
-    const { data: pendingJob } = await supabase
-      .from('ffiec_report_jobs')
-      .select('id')
-      .eq('cache_key', cacheKey)
-      .eq('report_type', 'market_intel')
-      .eq('status', 'processing')
-      .limit(1)
-      .maybeSingle();
+      // Check if there's already a processing job for this exact subject+peer combination
+      const { data: pendingJob } = await supabase
+        .from('ffiec_report_jobs')
+        .select('id')
+        .eq('cache_key', cacheKey)
+        .eq('report_type', 'market_intel')
+        .eq('status', 'processing')
+        .limit(1)
+        .maybeSingle();
 
-    if (pendingJob) {
-      return new Response(
-        JSON.stringify({ success: true, status: 'processing', jobId: pendingJob.id }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
+      if (pendingJob) {
+        return new Response(
+          JSON.stringify({ success: true, status: 'processing', jobId: pendingJob.id }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    } else {
+      console.log(`Cache bypass requested for ${bankName} (key: ${cacheKey}) — starting fresh TinyFish run`);
     }
 
     const subjectBankInfo: SubjectBankInfo = { name: bankName, rssd, city, state };
