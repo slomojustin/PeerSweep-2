@@ -191,6 +191,69 @@ export function classifyBehaviorProfile(signals: DerivedSignals): BehaviorProfil
   return "relationship_focused_funding";
 }
 
+interface QuarterDataLike {
+  report_date: string;
+  metrics: Record<string, number | null>;
+}
+
+export function deriveInputsFromQuarterData(
+  quarters: QuarterDataLike[],
+  peerAvgCostOfFunds?: number,
+): FrameworkInputs {
+  const latest = quarters[0].metrics;
+
+  const cof = latest['CALC_COF'] ?? 0;
+  const peerCoF = peerAvgCostOfFunds ?? cof;
+  const cofDiff = cof - peerCoF;
+  const cofVsPeer: "above" | "in_line" | "below" =
+    cofDiff > 0.15 ? "above" : cofDiff < -0.15 ? "below" : "in_line";
+
+  const totalLoans = latest['UBPRB528'];
+  const totalDeposits = latest['UBPRD154'];
+  const ldr =
+    totalLoans != null && totalDeposits != null && totalDeposits !== 0
+      ? (totalLoans / totalDeposits) * 100
+      : 0;
+
+  function trend(code: string): "increasing" | "stable" | "decreasing" {
+    return detectTrend(quarters.map(q => q.metrics[code] ?? 0));
+  }
+
+  return {
+    capital: {
+      tier1_leverage_ratio: latest['CALC_T1L'] ?? 0,
+      total_risk_based_capital: latest['CALC_RBC'] ?? 0,
+      capital_trend: trend('CALC_T1L'),
+      peer_percentile: 50,
+    },
+    earnings: {
+      net_interest_margin: latest['CALC_NIM'] ?? 0,
+      nim_trend: trend('CALC_NIM'),
+      cost_of_funds: cof,
+      cost_of_funds_trend: trend('CALC_COF'),
+      cost_of_funds_vs_peer: cofVsPeer,
+      roa: latest['CALC_ROA'] ?? 0,
+      roa_trend: trend('CALC_ROA'),
+    },
+    asset_quality: {
+      npa_ratio: latest['UBPRE130'] ?? 0,
+      npa_trend: detectNpaTrend(quarters.map(q => q.metrics['UBPRE130'] ?? 0)),
+      net_charge_offs: latest['UBPRE126'] ?? 0,
+      acl_to_loans: latest['UBPRE125'] ?? 0,
+    },
+    liquidity: {
+      loan_to_deposit_ratio: ldr,
+      ldr_trend: "stable",
+      non_core_funding_dependence: 0,
+      non_core_trend: "stable",
+      brokered_deposits_ratio: latest['CALC_BDR'] ?? 0,
+      borrowings_ratio: 0,
+      borrowings_trend: "stable",
+      liquid_assets_ratio: latest['CALC_LIQ'] ?? 0,
+    },
+  };
+}
+
 export const PROFILE_LABELS: Record<BehaviorProfile, string> = {
   aggressive_deposit_competitor: "Aggressive Deposit Competitor",
   rate_competitive_position: "Rate-Competitive Position",

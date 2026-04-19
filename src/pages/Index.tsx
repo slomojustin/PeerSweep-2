@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { type BankInfo, generateNarrative } from "@/data/bankData";
+import { type BankInfo } from "@/data/bankData";
 import { fetchUBPR } from "@/lib/api/ubpr";
 import BankSelector from "@/components/BankSelector";
 import UBPRReport from "@/components/UBPRReport";
 import AINarrativePanel from "@/components/AINarrativePanel";
 import PeerComparison from "@/components/PeerComparison";
+import type { QuarterData } from "@/lib/api/ubprPdf";
 
 import MarketResearch from "@/components/MarketResearch";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,10 @@ const Index = () => {
   const [showPeerList, setShowPeerList] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
   const [availableQuarters, setAvailableQuarters] = useState<string[]>([]);
+  const [peerLoadedData, setPeerLoadedData] = useState<{
+    subject: QuarterData[] | null;
+    peers: Map<string, QuarterData[] | null>;
+  } | null>(null);
   const { toast } = useToast();
 
   function toQuarterLabel(dateStr: string): string {
@@ -58,7 +63,6 @@ const Index = () => {
   }
 
   const selectedBank = subjectBank[0];
-  const narratives = selectedBank && metrics.length >= 2 ? generateNarrative(selectedBank, metrics) : [];
 
   const handleNavigate = async (tab: string) => {
     if (!selectedBank) return;
@@ -90,7 +94,7 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-background">
         {/* Dashboard Header */}
-        <header className="border-b sticky top-0 z-10 bg-gradient-to-r from-primary/10 via-background to-accent/10 backdrop-blur-sm">
+        <header className="border-b sticky top-0 z-10 bg-primary shadow-sm">
           <div className="container flex items-center justify-between h-14">
             <div className="flex items-center gap-2">
               <button onClick={() => setShowDashboard(false)} className="cursor-pointer hover:opacity-80 transition-opacity tracking-[0.18em] font-bold uppercase text-accent text-sm">
@@ -98,19 +102,19 @@ const Index = () => {
               </button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-foreground font-semibold hidden sm:block">🏦 {selectedBank.name}</span>
+              <span className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground font-semibold hidden sm:block">🏦 {selectedBank.name}</span>
               {[selectedBank.city, selectedBank.state].filter(Boolean).length > 0 && (
-                <span className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hidden md:block">
+                <span className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hidden md:block">
                   📍 {[selectedBank.city, selectedBank.state].filter(Boolean).join(', ')}
                 </span>
               )}
-              <span className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hidden md:block">
+              <span className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hidden md:block">
                 RSSD {selectedBank.rssd}
               </span>
               <div className="relative hidden md:block">
                 <button
                   onClick={() => setShowPeerList(p => !p)}
-                  className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors cursor-pointer"
+                  className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hover:bg-white/20 hover:text-primary-foreground transition-colors cursor-pointer"
                 >
                   👥 {peerBanks.length} peers ▾
                 </button>
@@ -123,7 +127,7 @@ const Index = () => {
                       </p>
                       {peerBanks.map(peer => (
                         <div key={peer.rssd} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50">
-                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />
+                          <span className="h-1.5 w-1.5 rounded-full bg-accent/60 shrink-0" />
                           <div>
                             <p className="text-xs font-medium text-foreground leading-tight">{peer.name}</p>
                             {(peer.city || peer.state) && (
@@ -136,7 +140,7 @@ const Index = () => {
                   </>
                 )}
               </div>
-              <Button variant="outline" size="sm" onClick={() => setShowDashboard(false)} className="ml-2">
+              <Button variant="outline" size="sm" onClick={() => setShowDashboard(false)} className="ml-2 border-white/30 text-primary-foreground bg-transparent hover:bg-white/10 hover:text-primary-foreground">
                 Change Bank
               </Button>
             </div>
@@ -192,65 +196,81 @@ const Index = () => {
             </div>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4 h-14 rounded-xl p-1 bg-muted/60 gap-1">
-              <TabsTrigger value="ubpr" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-background transition-all">
-                <FileText className="h-4 w-4" />
-                FFIEC Reports
-                {isUbprLoading && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                )}
-                {!isUbprLoading && metrics.length > 0 && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="insights" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-background transition-all">
-                <Brain className="h-4 w-4" />
-                AI Insights
-                {analysisReady && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="peers" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-background transition-all">
-                <Users className="h-4 w-4" />
-                Peer Analysis
-                {metrics.length > 0 && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="market" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-background transition-all">
-                <Globe className="h-4 w-4" />
-                Market Intel
-                {isMarketIntelLoading && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-                )}
-                {!isMarketIntelLoading && marketIntelData && (
-                  <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
-                )}
-              </TabsTrigger>
-            </TabsList>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <div className="bg-card rounded-2xl shadow-md border overflow-hidden">
+              <TabsList className="grid w-full grid-cols-4 h-14 rounded-none p-2 bg-muted/40 gap-1 border-b">
+                <TabsTrigger value="ubpr" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-card transition-all">
+                  <FileText className="h-4 w-4" />
+                  FFIEC Reports
+                  {isUbprLoading && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                  {!isUbprLoading && metrics.length > 0 && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="insights" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-card transition-all">
+                  <Brain className="h-4 w-4" />
+                  AI Insights
+                  {analysisReady && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="peers" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-card transition-all">
+                  <Users className="h-4 w-4" />
+                  Peer Analysis
+                  {metrics.length > 0 && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="market" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-card transition-all">
+                  <Globe className="h-4 w-4" />
+                  Market Intel
+                  {isMarketIntelLoading && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                  )}
+                  {!isMarketIntelLoading && marketIntelData && (
+                    <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="ubpr" forceMount className="data-[state=inactive]:sr-only">
-              <UBPRReport
-                bankName={selectedBank.name}
-                rssd={selectedBank.rssd}
-                selectedQuarter={selectedQuarter}
-                onQuartersLoaded={handleQuartersLoaded}
-              />
-            </TabsContent>
+              <div className="p-6 min-h-[520px]">
+                <TabsContent value="ubpr" forceMount className="data-[state=inactive]:sr-only mt-0">
+                  <UBPRReport
+                    bankName={selectedBank.name}
+                    rssd={selectedBank.rssd}
+                    selectedQuarter={selectedQuarter}
+                    onQuartersLoaded={handleQuartersLoaded}
+                  />
+                </TabsContent>
 
-            <TabsContent value="insights" forceMount className="data-[state=inactive]:sr-only">
-              <AINarrativePanel narratives={narratives} bankName={selectedBank.name} metrics={metrics} />
-            </TabsContent>
+                <TabsContent value="insights" forceMount className="data-[state=inactive]:sr-only mt-0">
+                  <AINarrativePanel
+                    bankName={selectedBank.name}
+                    rssd={selectedBank.rssd}
+                    peerBanks={peerBanks}
+                    peerLoadedData={peerLoadedData}
+                    marketIntelData={marketIntelData}
+                    selectedQuarter={selectedQuarter}
+                  />
+                </TabsContent>
 
-            <TabsContent value="peers" forceMount className="data-[state=inactive]:sr-only">
-              <PeerComparison subjectBank={selectedBank} subjectMetrics={metrics} peerBanks={peerBanks} selectedQuarter={selectedQuarter} />
-            </TabsContent>
+                <TabsContent value="peers" forceMount className="data-[state=inactive]:sr-only mt-0">
+                  <PeerComparison
+                    subjectBank={selectedBank}
+                    subjectMetrics={metrics}
+                    peerBanks={peerBanks}
+                    selectedQuarter={selectedQuarter}
+                    onPeerDataLoaded={(subject, peers) => setPeerLoadedData({ subject, peers })}
+                  />
+                </TabsContent>
 
-            <TabsContent value="market" forceMount className="data-[state=inactive]:sr-only">
-              <MarketResearch bank={selectedBank} peerBanks={peerBanks} cachedData={marketIntelData} onDataLoaded={setMarketIntelData} onLoadingChange={setIsMarketIntelLoading} />
-            </TabsContent>
-
+                <TabsContent value="market" forceMount className="data-[state=inactive]:sr-only mt-0">
+                  <MarketResearch bank={selectedBank} peerBanks={peerBanks} cachedData={marketIntelData} onDataLoaded={setMarketIntelData} onLoadingChange={setIsMarketIntelLoading} />
+                </TabsContent>
+              </div>
+            </div>
           </Tabs>
         </main>
       </div>
@@ -271,7 +291,7 @@ const Index = () => {
               </p>
             </div>
 
-          <div className="space-y-6 animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <div className="bg-card rounded-2xl shadow-md border p-6 space-y-5 animate-fade-in" style={{ animationDelay: "0.15s" }}>
             <BankSelector
               label="Subject Bank"
               description="Select the bank to analyze"
@@ -311,7 +331,7 @@ const Index = () => {
 
           </div>
 
-          <div className="mt-8 grid grid-cols-4 gap-4 text-center animate-fade-in" style={{ animationDelay: "0.15s" }}>
+          <div className="mt-6 grid grid-cols-4 gap-3 text-center animate-fade-in" style={{ animationDelay: "0.15s" }}>
             {[
               { icon: BarChart3, label: "Subject Bank\nFFIEC Report", tab: "ubpr" },
               { icon: Users, label: "Peer Group\nAnalysis", tab: "peers" },

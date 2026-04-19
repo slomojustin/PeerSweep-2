@@ -11,6 +11,7 @@ interface PeerComparisonProps {
   subjectMetrics: BankMetrics[]; // kept for interface compat
   peerBanks: BankInfo[];
   selectedQuarter?: string | null;
+  onPeerDataLoaded?: (subject: QuarterData[] | null, peers: Map<string, QuarterData[] | null>) => void;
 }
 
 interface MetricDef {
@@ -140,7 +141,7 @@ const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap, s
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter }: PeerComparisonProps) => {
+const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoaded }: PeerComparisonProps) => {
   const cache = useRef<Map<string, QuarterData[] | null>>(new Map());
   const [subjectData, setSubjectData] = useState<QuarterData[] | null | undefined>(undefined);
   const [peerDataMap, setPeerDataMap] = useState<Record<string, PeerEntry>>({});
@@ -189,6 +190,16 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter }: PeerCompari
           }
         }),
       );
+
+      // Notify parent that all data (subject + every peer) has settled
+      if (!cancelled && onPeerDataLoaded) {
+        const subjectResult = cache.current.get(subjectBank.rssd) ?? null;
+        const peerMap = new Map<string, QuarterData[] | null>();
+        for (const peer of peerBanks) {
+          peerMap.set(peer.rssd, cache.current.get(peer.rssd) ?? null);
+        }
+        onPeerDataLoaded(subjectResult, peerMap);
+      }
     }
 
     if (peerBanks.length > 0) loadAll();
