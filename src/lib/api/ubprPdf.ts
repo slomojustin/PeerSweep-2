@@ -92,6 +92,20 @@ export async function fetchUBPRData(rssd: string): Promise<QuarterData[]> {
         row.value !== null ? parseFloat(row.value) : null;
     }
 
+    // Unit normalization pass (before translation, operates on DB metric names)
+    for (const metrics of grouped.values()) {
+      // Stored in basis points — divide by 100 to get percentage
+      for (const key of ['net_interest_spread', 'loan_growth_rate'] as const) {
+        if (metrics[key] !== null && metrics[key] !== undefined) {
+          metrics[key] = (metrics[key] as number) / 100;
+        }
+      }
+      // Corrupt source data — null out implausible values
+      if (metrics['cost_of_funds'] !== null && (metrics['cost_of_funds'] as number) > 1000) {
+        metrics['cost_of_funds'] = null;
+      }
+    }
+
     // Translate snake_case keys → UBPR concept map codes, drop unmapped keys
     return Array.from(grouped.entries())
       .sort(([a], [b]) => b.localeCompare(a))
