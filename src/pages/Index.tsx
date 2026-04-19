@@ -40,6 +40,7 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("ubpr");
   const [marketIntelData, setMarketIntelData] = useState<MarketIntelData | null>(null);
   const [isMarketIntelLoading, setIsMarketIntelLoading] = useState(false);
+  const [showPeerList, setShowPeerList] = useState(false);
   const { toast } = useToast();
 
   const selectedBank = subjectBank[0];
@@ -92,9 +93,35 @@ const Index = () => {
               <span className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hidden md:block">
                 RSSD {selectedBank.rssd}
               </span>
-              <span className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hidden md:block">
-                👥 {peerBanks.length} peers
-              </span>
+              <div className="relative hidden md:block">
+                <button
+                  onClick={() => setShowPeerList(p => !p)}
+                  className="text-xs bg-muted border rounded-full px-2.5 py-0.5 text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors cursor-pointer"
+                >
+                  👥 {peerBanks.length} peers ▾
+                </button>
+                {showPeerList && (
+                  <>
+                    <div className="fixed inset-0 z-20" onClick={() => setShowPeerList(false)} />
+                    <div className="absolute right-0 top-full mt-2 z-30 bg-background border rounded-xl shadow-lg p-2 min-w-[220px]">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5">
+                        Peer Group
+                      </p>
+                      {peerBanks.map(peer => (
+                        <div key={peer.rssd} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50">
+                          <span className="h-1.5 w-1.5 rounded-full bg-primary/60 shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-foreground leading-tight">{peer.name}</p>
+                            {(peer.city || peer.state) && (
+                              <p className="text-[11px] text-muted-foreground">{[peer.city, peer.state].filter(Boolean).join(', ')}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <Button variant="outline" size="sm" onClick={() => setShowDashboard(false)} className="ml-2">
                 Change Bank
               </Button>
