@@ -1,39 +1,27 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export interface UBPRPdfData {
-  report_date: string;
-  quarter: string;
-  metrics: Record<string, number | null>;
-}
-
 interface RawMetricRow {
   report_date: string;
   metric_name: string;
-  value: string | null;
-  period_type: string;
+  value: string | null; // Supabase returns numeric as string
 }
 
-function toQuarterLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  const month = d.getMonth();
-  const year = d.getFullYear();
-  const q = month < 3 ? 'Q1' : month < 6 ? 'Q2' : month < 9 ? 'Q3' : 'Q4';
-  return `${q} ${year}`;
+export interface QuarterData {
+  report_date: string; // "YYYY-MM-DD"
+  metrics: Record<string, number | null>;
 }
 
 /**
- * Fetches UBPR metrics for a bank from the ubpr_metrics table, grouped by report date.
- *
- * @param rssd - The RSSD ID of the bank to fetch data for.
- * @returns An array of UBPRPdfData objects, one per report date, sorted newest first.
- * @throws If the Supabase query fails (original error message preserved), or if no rows
- *         are returned for the given RSSD.
+ * Fetches UBPR metrics for a given RSSD from Supabase ubpr_metrics table.
+ * Groups rows by report_date and returns them sorted newest-first.
+ * @param rssd - The bank's RSSD ID
+ * @throws if Supabase returns an error or no rows are found for this RSSD
  */
-export const fetchUBPRData = async (rssd: string): Promise<UBPRPdfData[]> => {
+export async function fetchUBPRData(rssd: string): Promise<QuarterData[]> {
   try {
     const { data, error } = await supabase
       .from('ubpr_metrics')
-      .select('report_date, metric_name, value, period_type')
+      .select('report_date, metric_name, value')
       .eq('rssd', rssd)
       .order('report_date', { ascending: false });
 
@@ -47,24 +35,18 @@ export const fetchUBPRData = async (rssd: string): Promise<UBPRPdfData[]> => {
 
     const rows = data as RawMetricRow[];
 
-    // Group rows by report_date using a Map to preserve insertion order
-    const byDate = new Map<string, Record<string, number | null>>();
-
+    const grouped = new Map<string, Record<string, number | null>>();
     for (const row of rows) {
-      if (!byDate.has(row.report_date)) {
-        byDate.set(row.report_date, {});
-      }
-      const metrics = byDate.get(row.report_date)!;
-      metrics[row.metric_name] = row.value !== null ? parseFloat(row.value) : null;
+      if (!grouped.has(row.report_date)) grouped.set(row.report_date, {});
+      grouped.get(row.report_date)![row.metric_name] =
+        row.value !== null ? parseFloat(row.value) : null;
     }
 
-    return Array.from(byDate.entries()).map(([report_date, metrics]) => ({
-      report_date,
-      quarter: toQuarterLabel(report_date),
-      metrics,
-    }));
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([report_date, metrics]) => ({ report_date, metrics }));
   } catch (err) {
-    console.error(`fetchUBPRData failed for rssd=${rssd}:`, err);
+    console.error('[fetchUBPRData] failed for rssd:', rssd, err);
     throw err;
   }
-};
+}
