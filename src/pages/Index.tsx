@@ -93,8 +93,8 @@ const Index = () => {
         <header className="border-b sticky top-0 z-10 bg-gradient-to-r from-primary/10 via-background to-accent/10 backdrop-blur-sm">
           <div className="container flex items-center justify-between h-14">
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowDashboard(false)} className="font-brand text-lg cursor-pointer hover:opacity-80 transition-opacity">
-                <span className="text-primary">Peer</span><span className="text-accent">Sweep</span>
+              <button onClick={() => setShowDashboard(false)} className="cursor-pointer hover:opacity-80 transition-opacity tracking-[0.18em] font-bold uppercase text-accent text-sm">
+                PeerSweep
               </button>
             </div>
             <div className="flex items-center gap-2">
@@ -263,8 +263,8 @@ const Index = () => {
       <div className="flex-1 flex items-center justify-center">
         <div className="container max-w-2xl py-16">
           <div className="text-center mb-12 animate-fade-in">
-              <h1 className="font-brand text-4xl md:text-5xl mb-1 tracking-tight">
-                <span className="text-primary">Peer</span><span className="text-accent">Sweep</span>
+              <h1 className="tracking-[0.18em] font-bold uppercase text-accent text-4xl md:text-5xl mb-1">
+                PeerSweep
               </h1>
               <p className="text-accent font-semibold tracking-wide uppercase text-sm">
                 Actionable Market Intel — Fast.

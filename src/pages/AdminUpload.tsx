@@ -145,8 +145,8 @@ const AdminUpload = () => {
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="container flex items-center justify-between h-14">
           <div className="flex items-center gap-3">
-            <Link to="/" className="font-brand text-lg hover:opacity-80 transition-opacity">
-              <span className="text-primary">Peer</span><span className="text-accent">Sweep</span>
+            <Link to="/" className="tracking-[0.18em] font-bold uppercase text-accent text-sm hover:opacity-80 transition-opacity">
+              PeerSweep
             </Link>
             <span className="text-muted-foreground">/</span>
             <span className="text-sm font-medium">Admin: Bulk Data Upload</span>
