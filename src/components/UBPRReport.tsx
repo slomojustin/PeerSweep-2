@@ -64,11 +64,27 @@ const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
     }
   };
 
+  const quarterLabel = quarters?.[0]?.report_date
+    ? (() => {
+        const d = new Date(quarters[0].report_date + "T00:00:00");
+        const m = d.getMonth();
+        const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
+        return `${q} ${d.getFullYear()}`;
+      })()
+    : null;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between border-b-2 border-primary pb-3">
         <div>
-          <h3 className="font-display text-lg text-foreground">FFIEC Reports</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-display text-lg text-foreground">FFIEC Reports</h3>
+            {quarterLabel && (
+              <span className="text-xs bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
+                {quarterLabel}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground">{bankName} — Uniform Bank Performance Report</p>
         </div>
         {quarters && (

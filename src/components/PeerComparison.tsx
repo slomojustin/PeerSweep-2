@@ -224,7 +224,19 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="border-b-2 border-primary pb-3">
-        <h3 className="font-display text-lg text-foreground">Peer Comparison</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-display text-lg text-foreground">Peer Comparison</h3>
+          {subjectData && subjectData.length > 0 && (() => {
+            const d = new Date(subjectData[0].report_date + "T00:00:00");
+            const m = d.getMonth();
+            const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
+            return (
+              <span className="text-xs bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
+                {q} {d.getFullYear()}
+              </span>
+            );
+          })()}
+        </div>
         <p className="text-sm text-muted-foreground">
           {subjectBank.name} vs. {peerBanks.length} peer{peerBanks.length !== 1 ? "s" : ""}
           {isLoadingAny && " — loading data…"}
