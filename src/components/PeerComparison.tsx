@@ -48,25 +48,107 @@ const Shimmer = () => (
   <div className="animate-pulse bg-muted rounded h-4 w-12 ml-auto" />
 );
 
-// null  = fetched, no data / error
-// undefined = not yet fetched (loading)
+// null = fetched, no data / error  |  undefined = not yet fetched (loading)
 type PeerEntry = QuarterData[] | null | undefined;
+
+// ── Summary strip helpers ─────────────────────────────────────────────────────
+
+interface SummaryItem { metric: MetricDef; rank: number; total: number; pct: number; }
+
+function computeSummary(
+  subjectMap: Record<string, number | null>,
+  peers: BankInfo[],
+  peerDataMap: Record<string, PeerEntry>,
+): SummaryItem[] {
+  return METRICS.flatMap((metric) => {
+    const subjectVal = subjectMap[metric.code] ?? null;
+    if (subjectVal === null) return [];
+    const peerVals = peers
+      .map((p) => {
+        const e = peerDataMap[p.rssd];
+        if (!e || e.length === 0) return null;
+        return getLatestMetrics(e)[metric.code] ?? null;
+      })
+      .filter((v): v is number => v !== null);
+    if (peerVals.length === 0) return [];
+    const allVals = [subjectVal, ...peerVals];
+    const sorted = [...allVals].sort((a, b) => metric.higherGood ? b - a : a - b);
+    const rank = sorted.indexOf(subjectVal) + 1;
+    const total = allVals.length;
+    return [{ metric, rank, total, pct: rank / total }];
+  });
+}
+
+// ── Inline bar chart ──────────────────────────────────────────────────────────
+
+interface BarChartProps {
+  metric: MetricDef;
+  subjectBank: BankInfo;
+  subjectMap: Record<string, number | null> | null;
+  peers: BankInfo[];
+  peerDataMap: Record<string, PeerEntry>;
+}
+
+const MetricBarChart = ({ metric, subjectBank, subjectMap, peers, peerDataMap }: BarChartProps) => {
+  const banks: { name: string; val: number; isSubject: boolean }[] = [];
+
+  const sv = subjectMap?.[metric.code] ?? null;
+  if (sv !== null) banks.push({ name: subjectBank.name, val: sv, isSubject: true });
+  for (const peer of peers) {
+    const e = peerDataMap[peer.rssd];
+    if (!e || e.length === 0) continue;
+    const v = getLatestMetrics(e)[metric.code] ?? null;
+    if (v !== null) banks.push({ name: peer.name, val: v, isSubject: false });
+  }
+
+  if (banks.length === 0) return <p className="text-xs text-muted-foreground">No data available.</p>;
+
+  const sorted = [...banks].sort((a, b) => metric.higherGood ? b.val - a.val : a.val - b.val);
+  const vals = sorted.map((b) => b.val);
+  const minVal = Math.min(...vals);
+  const maxVal = Math.max(...vals);
+  const range = maxVal - minVal || 1;
+
+  return (
+    <div className="space-y-2 py-1">
+      {sorted.map((bank, i) => {
+        const barPct = ((bank.val - minVal) / range) * 75 + 10;
+        return (
+          <div key={bank.name + i} className="flex items-center gap-3">
+            <span className={`text-xs w-44 truncate text-right shrink-0 ${bank.isSubject ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+              {bank.name}
+            </span>
+            <div className="flex-1 h-6 flex items-center">
+              <div
+                className={`h-5 rounded transition-all ${bank.isSubject ? "bg-primary" : "bg-muted-foreground/25"}`}
+                style={{ width: `${barPct}%` }}
+              />
+            </div>
+            <span className={`text-xs tabular-nums w-20 shrink-0 ${bank.isSubject ? "font-semibold text-foreground" : "text-muted-foreground"}`}>
+              {formatValue(bank.val, metric.format)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
   const cache = useRef<Map<string, QuarterData[] | null>>(new Map());
   const [subjectData, setSubjectData] = useState<QuarterData[] | null | undefined>(undefined);
   const [peerDataMap, setPeerDataMap] = useState<Record<string, PeerEntry>>({});
+  const [expandedMetric, setExpandedMetric] = useState<string | null>(null);
 
-  const peerRssdKey = useMemo(
-    () => peerBanks.map(p => p.rssd).sort().join(","),
-    [peerBanks],
-  );
+  const peerRssdKey = useMemo(() => peerBanks.map(p => p.rssd).sort().join(","), [peerBanks]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadAll() {
-      // ── Subject bank ──────────────────────────────────────────
+      // Subject
       const subjectCached = cache.current.get(subjectBank.rssd);
       if (subjectCached !== undefined) {
         if (!cancelled) setSubjectData(subjectCached);
@@ -81,8 +163,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
         }
       }
 
-      // ── Peers ─────────────────────────────────────────────────
-      // Show cached peers immediately, mark uncached as loading
+      // Peers — show cached immediately, mark uncached as loading
       const initialMap: Record<string, PeerEntry> = {};
       for (const peer of peerBanks) {
         initialMap[peer.rssd] = cache.current.has(peer.rssd)
@@ -106,19 +187,26 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
       );
     }
 
-    if (peerBanks.length > 0) {
-      loadAll();
-    }
-
+    if (peerBanks.length > 0) loadAll();
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectBank.rssd, peerRssdKey]);
 
   const isLoadingAny =
-    subjectData === undefined ||
-    peerBanks.some(p => peerDataMap[p.rssd] === undefined);
+    subjectData === undefined || peerBanks.some(p => peerDataMap[p.rssd] === undefined);
 
   const subjectMetricsMap = subjectData ? getLatestMetrics(subjectData) : null;
+
+  const summary = useMemo(() => {
+    if (subjectData === undefined || peerBanks.some(p => peerDataMap[p.rssd] === undefined) || !subjectMetricsMap)
+      return null;
+    return computeSummary(subjectMetricsMap, peerBanks, peerDataMap);
+  }, [subjectData, subjectMetricsMap, peerBanks, peerDataMap]);
+
+  const strengths  = summary?.filter(s => s.pct <= 0.33) ?? [];
+  const weaknesses = summary?.filter(s => s.pct >= 0.67) ?? [];
+
+  const totalCols = peerBanks.length + 4; // metric + subject + peers + avg + rank
 
   if (peerBanks.length === 0) {
     return (
@@ -134,7 +222,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
       <div className="border-b-2 border-primary pb-3">
         <h3 className="font-display text-lg text-foreground">Peer Comparison</h3>
         <p className="text-sm text-muted-foreground">
@@ -143,6 +231,45 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
         </p>
       </div>
 
+      {/* Summary strip */}
+      {summary && (strengths.length > 0 || weaknesses.length > 0) && (
+        <div className="flex flex-wrap gap-x-6 gap-y-2 px-1">
+          {strengths.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-green-700 uppercase tracking-wide shrink-0">
+                Strengths
+              </span>
+              {strengths.map(({ metric }) => (
+                <span
+                  key={metric.code}
+                  className="text-xs bg-green-500/10 text-green-700 border border-green-200 rounded-full px-2.5 py-0.5 font-medium cursor-pointer hover:bg-green-500/20 transition-colors"
+                  onClick={() => setExpandedMetric(prev => prev === metric.code ? null : metric.code)}
+                >
+                  {metric.label}
+                </span>
+              ))}
+            </div>
+          )}
+          {weaknesses.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-semibold text-red-600 uppercase tracking-wide shrink-0">
+                Lagging
+              </span>
+              {weaknesses.map(({ metric }) => (
+                <span
+                  key={metric.code}
+                  className="text-xs bg-red-500/10 text-red-600 border border-red-200 rounded-full px-2.5 py-0.5 font-medium cursor-pointer hover:bg-red-500/20 transition-colors"
+                  onClick={() => setExpandedMetric(prev => prev === metric.code ? null : metric.code)}
+                >
+                  {metric.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main table */}
       <Card className="overflow-hidden overflow-x-auto">
         <Table>
           <TableHeader>
@@ -163,30 +290,27 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {METRICS.map((metric) => {
+            {METRICS.flatMap((metric) => {
               const subjectVal = subjectMetricsMap
                 ? (subjectMetricsMap[metric.code] ?? null)
                 : null;
 
               const peerVals = peerBanks.map(peer => {
                 const entry = peerDataMap[peer.rssd];
-                if (!entry || entry === undefined) return null;
+                if (!entry) return null;
                 return getLatestMetrics(entry)[metric.code] ?? null;
               });
 
-              const validPeerVals = peerVals.filter(v => v !== null) as number[];
+              const validPeerVals = peerVals.filter((v): v is number => v !== null);
               const avg = validPeerVals.length > 0
                 ? validPeerVals.reduce((s, v) => s + v, 0) / validPeerVals.length
                 : null;
 
-              // Rank subject among all (subject + peers with data)
               let rankStr = "—";
               let subjectColorClass = "";
               if (subjectVal !== null) {
                 const allVals = [subjectVal, ...validPeerVals];
-                const sorted = [...allVals].sort((a, b) =>
-                  metric.higherGood ? b - a : a - b,
-                );
+                const sorted = [...allVals].sort((a, b) => metric.higherGood ? b - a : a - b);
                 const rank = sorted.indexOf(subjectVal) + 1;
                 const total = allVals.length;
                 rankStr = `${rank} of ${total}`;
@@ -195,15 +319,24 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
                 else if (pct >= 0.67) subjectColorClass = "text-red-500 font-semibold";
               }
 
-              return (
-                <TableRow key={metric.code}>
-                  <TableCell className="font-medium text-xs py-2 px-4">{metric.label}</TableCell>
-                  <TableCell
-                    className={`text-right tabular-nums text-xs bg-primary/5 border-x border-primary/20 py-2 px-4 ${subjectColorClass}`}
-                  >
-                    {subjectData === undefined
-                      ? <Shimmer />
-                      : formatValue(subjectVal, metric.format)}
+              const isExpanded = expandedMetric === metric.code;
+
+              const dataRow = (
+                <TableRow
+                  key={metric.code}
+                  className="cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => setExpandedMetric(isExpanded ? null : metric.code)}
+                >
+                  <TableCell className="font-medium text-xs py-2 px-4">
+                    <span className="flex items-center gap-1.5">
+                      <span className={`text-[9px] text-muted-foreground transition-transform inline-block ${isExpanded ? "rotate-90" : ""}`}>
+                        ▶
+                      </span>
+                      {metric.label}
+                    </span>
+                  </TableCell>
+                  <TableCell className={`text-right tabular-nums text-xs bg-primary/5 border-x border-primary/20 py-2 px-4 ${subjectColorClass}`}>
+                    {subjectData === undefined ? <Shimmer /> : formatValue(subjectVal, metric.format)}
                   </TableCell>
                   {peerBanks.map(peer => {
                     const entry = peerDataMap[peer.rssd];
@@ -229,6 +362,27 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
                   </TableCell>
                 </TableRow>
               );
+
+              if (!isExpanded) return [dataRow];
+
+              const expandedRow = (
+                <TableRow key={`${metric.code}-chart`} className="bg-muted/20 hover:bg-muted/20">
+                  <TableCell colSpan={totalCols} className="px-6 py-4 border-b">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                      {metric.label} — All Banks Ranked
+                    </p>
+                    <MetricBarChart
+                      metric={metric}
+                      subjectBank={subjectBank}
+                      subjectMap={subjectMetricsMap}
+                      peers={peerBanks}
+                      peerDataMap={peerDataMap}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+
+              return [dataRow, expandedRow];
             })}
           </TableBody>
         </Table>
