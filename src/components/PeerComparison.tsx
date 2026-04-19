@@ -231,7 +231,7 @@ const PeerComparison = ({ subjectBank, peerBanks }: PeerComparisonProps) => {
             const m = d.getMonth();
             const q = m < 3 ? "Q1" : m < 6 ? "Q2" : m < 9 ? "Q3" : "Q4";
             return (
-              <span className="text-xs bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
+              <span className="text-sm bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-3 py-1 font-semibold">
                 {q} {d.getFullYear()}
               </span>
             );

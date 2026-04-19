@@ -80,7 +80,7 @@ const UBPRReport = ({ bankName, rssd, selectedQuarters }: UBPRReportProps) => {
           <div className="flex items-center gap-2">
             <h3 className="font-display text-lg text-foreground">FFIEC Reports</h3>
             {quarterLabel && (
-              <span className="text-xs bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-2.5 py-0.5 font-semibold">
+              <span className="text-sm bg-amber-500/10 text-amber-700 border border-amber-200 rounded-full px-3 py-1 font-semibold">
                 {quarterLabel}
               </span>
             )}
