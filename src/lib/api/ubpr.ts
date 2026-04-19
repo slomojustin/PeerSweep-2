@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { BankMetrics } from '@/data/bankData';
-import { pollFFIECJob } from '@/lib/api/ffiecJobs';
+import { pollAgentRuns } from '@/lib/api/pollAgentRuns';
 
 interface UBPRQuarter {
   quarter: string;
@@ -74,7 +74,7 @@ export const fetchUBPR = async (rssd: string, bankName: string, onStatusUpdate?:
   }
 
   if (data?.success && data?.status === 'processing' && data?.jobId) {
-    const finalJob = await pollFFIECJob(data.jobId, undefined, onStatusUpdate);
+    const finalJob = await pollAgentRuns(data.jobId, undefined, onStatusUpdate);
 
     if (finalJob.status !== 'completed' || !finalJob.data?.quarters) {
       throw new Error(finalJob.error || 'No UBPR data returned');

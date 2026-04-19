@@ -5,7 +5,7 @@ import {
   mergeMarketIntelResults,
   hasUsableMarketIntelData,
   type PeerRunResult,
-} from '../ffiec-job-status/market-intel-helpers.ts';
+} from '../poll-agent-runs/market-intel-helpers.ts';
 
 // ── extractPeerRunIds ─────────────────────────────────────────────────────────
 

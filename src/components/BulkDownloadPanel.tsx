@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Download, Loader2, CheckCircle, AlertTriangle, ExternalLink, Database } from "lucide-react";
 import { startBulkDownload } from "@/lib/api/bulkDownload";
-import { pollFFIECJob } from "@/lib/api/ffiecJobs";
+import { pollAgentRuns } from "@/lib/api/pollAgentRuns";
 import { useToast } from "@/hooks/use-toast";
 
 const BulkDownloadPanel = () => {
@@ -27,7 +27,7 @@ const BulkDownloadPanel = () => {
       const { jobId } = await startBulkDownload(reportDate, (url) => setStreamingUrl(url));
 
       // Poll for TinyFish completion
-      const finalJob = await pollFFIECJob(jobId, (url) => setStreamingUrl(url));
+      const finalJob = await pollAgentRuns(jobId, (url) => setStreamingUrl(url));
 
       if (finalJob.status === "failed") {
         throw new Error(finalJob.error || "Bulk download failed");

@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
         source: 'live',
         cache_key: cacheKey,
         // tinyfish_run_id holds the first peer run as a fallback so the existing poller guard doesn't fire.
-        // TODO: update ffiec-job-status to read _runIds.peers, poll all runs, and merge results before completing.
+        // TODO: update poll-agent-runs to read _runIds.peers, poll all runs, and merge results before completing.
         tinyfish_run_id: peerRunIds[0],
         result_metrics: {
           _peerRssds: peerRssdList,

@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { pollFFIECJob } from '@/lib/api/ffiecJobs';
+import { pollAgentRuns } from '@/lib/api/pollAgentRuns';
 
 interface BulkDownloadResponse {
   success: boolean;

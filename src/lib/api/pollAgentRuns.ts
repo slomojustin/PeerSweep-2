@@ -1,54 +1,45 @@
 import { supabase } from '@/integrations/supabase/client';
 
-export interface FFIECJobStatusResponse {
+export interface AgentRunStatusResponse {
   success: boolean;
   jobId?: string;
-  reportType?: 'ubpr_metrics' | 'ubpr_pdf';
   status?: 'pending' | 'processing' | 'completed' | 'failed';
   source?: 'cache' | 'live' | 'fallback';
-  data?: {
-    quarters: Array<Record<string, unknown>>;
-  };
-  pdfUrl?: string | null;
-  ffiecUrl?: string;
-  message?: string;
+  data?: unknown;
   error?: string;
   streamingUrl?: string | null;
-  // One entry per peer run, null for runs not yet streaming. Index matches peerBanks order.
   streamingUrls?: (string | null)[];
 }
 
 const POLL_INTERVAL_MS = 5000;
 const MAX_POLL_ATTEMPTS = 120;
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export const pollFFIECJob = async (
+export const pollAgentRuns = async (
   jobId: string,
   onStreamingUrl?: (url: string) => void,
   onStatusUpdate?: (message: string) => void,
   onStreamingUrls?: (urls: (string | null)[]) => void,
   signal?: AbortSignal,
   onPerRunResult?: (index: number, result: unknown) => void,
-): Promise<FFIECJobStatusResponse> => {
+): Promise<AgentRunStatusResponse> => {
   const reportedIndices = new Set<number>();
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    if (attempt === 0) onStatusUpdate?.("Connecting to FFIEC data source…");
-    else if (attempt === 1) onStatusUpdate?.("Fetching bank data — this takes 30–60 seconds for new banks…");
-    else if (attempt === 6) onStatusUpdate?.("Still working, FFIEC can be slow…");
+    if (attempt === 0) onStatusUpdate?.("Connecting to agent…");
+    else if (attempt === 1) onStatusUpdate?.("Agents are researching — this takes 1–3 minutes…");
+    else if (attempt === 6) onStatusUpdate?.("Still working…");
     else if (attempt === 12) onStatusUpdate?.("Almost there, finalizing data…");
 
-    const { data, error } = await supabase.functions.invoke<FFIECJobStatusResponse>('ffiec-job-status', {
+    const { data, error } = await supabase.functions.invoke<AgentRunStatusResponse>('poll-agent-runs', {
       body: { jobId },
     });
 
     if (error) {
-      throw new Error(`Failed to check FFIEC job status: ${error.message}`);
+      throw new Error(`Failed to check agent run status: ${error.message}`);
     }
 
     if (!data?.success) {
-      throw new Error(data?.error || 'Failed to check FFIEC job status');
+      throw new Error(data?.error || 'Failed to check agent run status');
     }
 
     if (data.streamingUrl && onStreamingUrl) {
@@ -74,7 +65,7 @@ export const pollFFIECJob = async (
     }
 
     if (data.status === 'failed') {
-      onStatusUpdate?.(data.error || 'FFIEC retrieval failed');
+      onStatusUpdate?.(data.error || 'Agent run failed');
       return data;
     }
 
@@ -88,5 +79,5 @@ export const pollFFIECJob = async (
     });
   }
 
-  throw new Error('FFIEC retrieval is taking longer than expected. Please try again.');
+  throw new Error('Agent run is taking longer than expected. Please try again.');
 };
