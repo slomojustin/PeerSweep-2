@@ -18,19 +18,11 @@ import type { MarketIntelData } from "@/lib/api/marketIntel";
 
 const DEMO_SUBJECT_BANK: BankInfo = { rssd: "962966", name: "SOFI BANK, NATIONAL ASSOCIATION", city: "Cottonwood Heights", state: "UT" };
 
-const DEMO_PEER_BANKS: BankInfo[] = [
-  { rssd: "2917317", name: "AXOS BANK",                              city: "San Diego", state: "CA" },
-  { rssd: "852218",  name: "JPMORGAN CHASE BANK, NATIONAL ASSOCIATION", city: "Columbus", state: "OH" },
-  { rssd: "3284070", name: "ALLY BANK",                              city: "Sandy",     state: "UT" },
-  { rssd: "112837",  name: "CAPITAL ONE, NATIONAL ASSOCIATION",      city: "Mc Lean",   state: "VA" },
-  { rssd: "264772",  name: "LENDINGCLUB BANK, NATIONAL ASSOCIATION", city: "Lehi",      state: "UT" },
-  { rssd: "3138146", name: "WESTERN ALLIANCE BANK",                  city: "Phoenix",   state: "AZ" },
-];
+const DEMO_PEER_BANK: BankInfo = { rssd: "2917317", name: "AXOS BANK", city: "San Diego", state: "CA" };
 
 const Index = () => {
   const [subjectBank, setSubjectBank] = useState<BankInfo[]>([]);
   const [peerBanks, setPeerBanks] = useState<BankInfo[]>([]);
-  const [bypassPeerMin, setBypassPeerMin] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [metrics, setMetrics] = useState<BankMetrics[]>([]);
@@ -42,7 +34,6 @@ const Index = () => {
   const [activeTab, setActiveTab] = useState("ubpr");
   const [marketIntelData, setMarketIntelData] = useState<MarketIntelData | null>(null);
   const [isMarketIntelLoading, setIsMarketIntelLoading] = useState(false);
-  const [showPeerList, setShowPeerList] = useState(false);
   const [selectedQuarter, setSelectedQuarter] = useState<string | null>(null);
   const [availableQuarters, setAvailableQuarters] = useState<string[]>([]);
   const [peerLoadedData, setPeerLoadedData] = useState<{
@@ -112,35 +103,11 @@ const Index = () => {
               <span className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hidden md:block">
                 RSSD {selectedBank.rssd}
               </span>
-              <div className="relative hidden md:block">
-                <button
-                  onClick={() => setShowPeerList(p => !p)}
-                  className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hover:bg-white/20 hover:text-primary-foreground transition-colors cursor-pointer"
-                >
-                  👥 {peerBanks.length} peers ▾
-                </button>
-                {showPeerList && (
-                  <>
-                    <div className="fixed inset-0 z-20" onClick={() => setShowPeerList(false)} />
-                    <div className="absolute right-0 top-full mt-2 z-30 bg-background border rounded-xl shadow-lg p-2 min-w-[220px]">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 py-1.5">
-                        Peer Group
-                      </p>
-                      {peerBanks.map(peer => (
-                        <div key={peer.rssd} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted/50">
-                          <span className="h-1.5 w-1.5 rounded-full bg-accent/60 shrink-0" />
-                          <div>
-                            <p className="text-xs font-medium text-foreground leading-tight">{peer.name}</p>
-                            {(peer.city || peer.state) && (
-                              <p className="text-[11px] text-muted-foreground">{[peer.city, peer.state].filter(Boolean).join(', ')}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
+              {peerBanks[0] && (
+                <span className="text-xs bg-white/10 border border-white/20 rounded-full px-2.5 py-0.5 text-primary-foreground/70 hidden md:block">
+                  👥 vs. {peerBanks[0].name}
+                </span>
+              )}
               <Button variant="outline" size="sm" onClick={() => setShowDashboard(false)} className="ml-2 border-white/30 text-primary-foreground bg-transparent hover:bg-white/10 hover:text-primary-foreground">
                 Change Bank
               </Button>
@@ -219,7 +186,7 @@ const Index = () => {
                 </TabsTrigger>
                 <TabsTrigger value="peers" className="gap-2 text-sm font-medium rounded-lg data-[state=active]:shadow-md data-[state=active]:bg-card transition-all">
                   <Users className="h-4 w-4" />
-                  Peer Analysis
+                  Peer Bank Analysis
                   {metrics.length > 0 && (
                     <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
                   )}
@@ -301,32 +268,20 @@ const Index = () => {
             />
 
             <BankSelector
-              label="Peer Group"
-              description="Select up to 25 banks for comparison"
+              label="Peer Bank"
+              description="Select one bank to compare against"
               selected={peerBanks}
               onSelect={setPeerBanks}
-              multiple
-              maxSelections={25}
             />
             <div className="flex items-center gap-2 mt-1">
-              <p className={cn("text-xs", peerBanks.length >= 6 || bypassPeerMin ? "text-green-600" : "text-yellow-600")}>
-                {peerBanks.length >= 6
-                  ? `${peerBanks.length} peers selected ✓`
-                  : bypassPeerMin
-                  ? `${peerBanks.length} peers selected (min bypassed)`
-                  : `${peerBanks.length} of 6 minimum selected`}
+              <p className={cn("text-xs", peerBanks.length >= 1 ? "text-green-600" : "text-yellow-600")}>
+                {peerBanks.length >= 1 ? "Peer bank selected ✓" : "Select a peer bank to continue"}
               </p>
               <button
-                onClick={() => { setSubjectBank([DEMO_SUBJECT_BANK]); setPeerBanks(DEMO_PEER_BANKS); }}
+                onClick={() => { setSubjectBank([DEMO_SUBJECT_BANK]); setPeerBanks([DEMO_PEER_BANK]); }}
                 className="text-xs text-accent underline hover:text-accent/80 font-medium transition-colors"
               >
                 load demo preset
-              </button>
-              <button
-                onClick={() => { setBypassPeerMin(b => !b); setPeerBanks([]); }}
-                className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
-              >
-                {bypassPeerMin ? "re-enable min" : "bypass for testing"}
               </button>
             </div>
 
@@ -336,7 +291,7 @@ const Index = () => {
             {[
               { icon: BarChart3, label: "Subject Bank\nFFIEC Report", tab: "ubpr" },
               { icon: Brain, label: "Detailed\nAnalysis", tab: "insights" },
-              { icon: Users, label: "Peer Group\nAnalysis", tab: "peers" },
+              { icon: Users, label: "Peer Bank\nAnalysis", tab: "peers" },
               { icon: Globe, label: "Current Market\nIntelligence", tab: "market" },
             ].map(({ icon: Icon, label, tab }) => (
               <button
@@ -345,12 +300,12 @@ const Index = () => {
                 onClick={() => handleNavigate(tab)}
                 className={cn(
                   "p-3 rounded-lg transition-all",
-                  selectedBank && !isUbprLoading && (peerBanks.length >= 6 || bypassPeerMin)
+                  selectedBank && !isUbprLoading && (peerBanks.length >= 1)
                     ? "bg-accent/15 border-2 border-accent text-accent cursor-pointer hover:bg-accent/25 hover:scale-105"
                     : "bg-muted/50 text-muted-foreground cursor-default"
                 )}
               >
-                <Icon className={cn("h-5 w-5 mx-auto mb-1.5", selectedBank && !isUbprLoading && (peerBanks.length >= 6 || bypassPeerMin) ? "text-accent" : "text-primary/70")} />
+                <Icon className={cn("h-5 w-5 mx-auto mb-1.5", selectedBank && !isUbprLoading && (peerBanks.length >= 1) ? "text-accent" : "text-primary/70")} />
                 <p className="text-xs font-medium whitespace-pre-line">{label}</p>
               </button>
             ))}

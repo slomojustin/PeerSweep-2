@@ -218,10 +218,10 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
     return computeSummary(subjectMetricsMap, peerBanks, peerDataMap, selectedQuarter);
   }, [subjectData, subjectMetricsMap, peerBanks, peerDataMap, selectedQuarter]);
 
-  const strengths  = summary?.filter(s => s.pct <= 0.33) ?? [];
-  const weaknesses = summary?.filter(s => s.pct >= 0.67) ?? [];
+  const strengths  = summary?.filter(s => s.rank === 1) ?? [];
+  const weaknesses = summary?.filter(s => s.rank > 1) ?? [];
 
-  const totalCols = peerBanks.length + 4; // metric + subject + peers + avg + rank
+  const totalCols = peerBanks.length + 2; // metric + subject + peers
 
   if (peerBanks.length === 0) {
     return (
@@ -230,7 +230,7 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
           <h3 className="font-display text-lg text-foreground">Peer Comparison</h3>
         </div>
         <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Select peer banks to enable comparison analysis.</p>
+          <p className="text-muted-foreground">Select a peer bank to enable comparison analysis.</p>
         </Card>
       </div>
     );
@@ -254,7 +254,7 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
           })()}
         </div>
         <p className="text-sm text-muted-foreground">
-          {subjectBank.name} vs. {peerBanks.length} peer{peerBanks.length !== 1 ? "s" : ""}
+          {subjectBank.name} vs. {peerBanks[0]?.name ?? "peer bank"}
           {isLoadingAny && " — loading data…"}
         </p>
       </div>
@@ -311,10 +311,6 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
                   {peer.name}
                 </TableHead>
               ))}
-              <TableHead className="text-right font-semibold bg-muted/30 border-l-2 border-border min-w-[90px] text-xs">
-                Peer Avg
-              </TableHead>
-              <TableHead className="text-right font-semibold min-w-[70px] text-xs">Rank</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -330,21 +326,14 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
               });
 
               const validPeerVals = peerVals.filter((v): v is number => v !== null);
-              const avg = validPeerVals.length > 0
-                ? validPeerVals.reduce((s, v) => s + v, 0) / validPeerVals.length
-                : null;
 
-              let rankStr = "—";
               let subjectColorClass = "";
-              if (subjectVal !== null) {
-                const allVals = [subjectVal, ...validPeerVals];
-                const sorted = [...allVals].sort((a, b) => metric.higherGood ? b - a : a - b);
-                const rank = sorted.indexOf(subjectVal) + 1;
-                const total = allVals.length;
-                rankStr = `${rank} of ${total}`;
-                const pct = rank / total;
-                if (pct <= 0.33) subjectColorClass = "text-green-600 font-semibold";
-                else if (pct >= 0.67) subjectColorClass = "text-red-500 font-semibold";
+              if (subjectVal !== null && validPeerVals.length > 0) {
+                const peerVal = validPeerVals[0];
+                const subjectWins = metric.higherGood ? subjectVal > peerVal : subjectVal < peerVal;
+                const subjectLoses = metric.higherGood ? subjectVal < peerVal : subjectVal > peerVal;
+                if (subjectWins) subjectColorClass = "text-green-600 font-semibold";
+                else if (subjectLoses) subjectColorClass = "text-red-500 font-semibold";
               }
 
               const isExpanded = expandedMetric === metric.code;
@@ -382,12 +371,6 @@ const PeerComparison = ({ subjectBank, peerBanks, selectedQuarter, onPeerDataLoa
                       </TableCell>
                     );
                   })}
-                  <TableCell className="text-right tabular-nums text-xs bg-muted/30 font-medium border-l-2 border-border py-2 px-4">
-                    {avg !== null ? formatValue(avg, metric.format) : "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums text-xs py-2 px-4 text-muted-foreground">
-                    {rankStr}
-                  </TableCell>
                 </TableRow>
               );
 
