@@ -648,6 +648,16 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
               <span className="text-xs text-muted-foreground/60">/ {peerBanks.length}</span>
             </div>
             <TinyFishBadge />
+            <Button
+              onClick={() => handleFetch(true)}
+              disabled={isLoading}
+              size="sm"
+              variant="outline"
+              className="gap-1.5 border-accent/40 text-accent hover:bg-accent/10"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Run Live
+            </Button>
           </div>
         </div>
         <p className="text-sm text-muted-foreground">Competitive intelligence for {bank.name}</p>
