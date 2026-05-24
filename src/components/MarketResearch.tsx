@@ -340,12 +340,10 @@ const AgentStreamPanel = ({
 const FlatResultsView = ({
   data,
   onRefresh,
-  onRunLive,
   isLoading,
 }: {
   data: MarketIntelData;
   onRefresh: () => void;
-  onRunLive: () => void;
   isLoading: boolean;
 }) => (
   <div className="space-y-8">
@@ -464,10 +462,6 @@ const FlatResultsView = ({
         <Button variant="outline" size="sm" onClick={onRefresh} disabled={isLoading} className="gap-2">
           {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
           Refresh
-        </Button>
-        <Button variant="outline" size="sm" onClick={onRunLive} disabled={isLoading} className="gap-2 border-accent/40 text-accent hover:bg-accent/10">
-          <RefreshCw className="h-3 w-3" />
-          Run Live
         </Button>
       </div>
       <div className="flex justify-center"><TinyFishBadge /></div>
@@ -653,19 +647,9 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
               <span className="text-xs text-muted-foreground/60">/ {peerBanks.length}</span>
             </div>
             <TinyFishBadge />
-            <Button
-              onClick={() => handleFetch(true)}
-              disabled={isLoading}
-              size="sm"
-              variant="outline"
-              className="gap-1.5 border-accent/40 text-accent hover:bg-accent/10"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Run Live
-            </Button>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground">Competitive intelligence for {bank.name}</p>
+        <p className="text-sm text-muted-foreground">Live deposit rates, recent news, and LinkedIn activity for {bank.name}'s peer banks — refreshed by AI agents.</p>
       </div>
 
       {/* Initial fetch card */}
@@ -681,10 +665,6 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
               ) : (
                 <><Globe className="h-4 w-4" />Retrieve Market Intel</>
               )}
-            </Button>
-            <Button onClick={() => handleFetch(true)} disabled={isLoading} variant="outline" className="gap-2 border-accent/40 text-accent hover:bg-accent/10">
-              <RefreshCw className="h-4 w-4" />
-              Run Live
             </Button>
           </div>
         </Card>
@@ -771,7 +751,7 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
 
       {/* Flat cached results view */}
       {cachedResult && !showAgentView && (
-        <FlatResultsView data={cachedResult} onRefresh={() => handleFetch(false)} onRunLive={() => handleFetch(true)} isLoading={isLoading} />
+        <FlatResultsView data={cachedResult} onRefresh={() => handleFetch(false)} isLoading={isLoading} />
       )}
     </div>
   );
