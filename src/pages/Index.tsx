@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { type BankInfo } from "@/data/bankData";
 import { fetchUBPR } from "@/lib/api/ubpr";
@@ -9,6 +9,7 @@ import PeerComparison from "@/components/PeerComparison";
 import type { QuarterData } from "@/lib/api/ubprPdf";
 
 import MarketResearch from "@/components/MarketResearch";
+import EmailCaptureBar from "@/components/EmailCaptureBar";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Brain, Users, Globe, FileText } from "lucide-react";
@@ -40,6 +41,8 @@ const Index = () => {
     subject: QuarterData[] | null;
     peers: Map<string, QuarterData[] | null>;
   } | null>(null);
+  const [showEmailBanner, setShowEmailBanner] = useState(false);
+  const emailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { toast } = useToast();
 
   function toQuarterLabel(dateStr: string): string {
@@ -81,6 +84,13 @@ const Index = () => {
     //   setStatusMessage(null);
     // }
   };
+
+  useEffect(() => {
+    if (!showDashboard || activeTab === "ubpr") return;
+    if (localStorage.getItem("ps_email_captured")) return;
+    emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 45_000);
+    return () => { if (emailTimerRef.current) clearTimeout(emailTimerRef.current); };
+  }, [showDashboard, activeTab]);
 
   if (showDashboard && selectedBank) {
     return (
@@ -162,6 +172,17 @@ const Index = () => {
                 </button>
               ))}
             </div>
+          )}
+
+          {showEmailBanner && (
+            <EmailCaptureBar
+              source="dashboard"
+              bankRssd={selectedBank.rssd}
+              onDismiss={() => {
+                setShowEmailBanner(false);
+                localStorage.setItem("ps_email_captured", "true");
+              }}
+            />
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -309,6 +330,10 @@ const Index = () => {
                 <p className="text-xs font-medium whitespace-pre-line">{label}</p>
               </button>
             ))}
+          </div>
+
+          <div className="mt-4 animate-fade-in" style={{ animationDelay: "0.25s" }}>
+            <EmailCaptureBar source="landing" />
           </div>
 
         </div>
