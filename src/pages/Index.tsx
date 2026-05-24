@@ -97,11 +97,11 @@ const Index = () => {
   };
 
   useEffect(() => {
-    if (!showDashboard || activeTab === "ubpr") return;
+    if (!showDashboard) return;
     if (localStorage.getItem("ps_email_captured")) return;
-    emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 20_000);
+    emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 10_000);
     return () => { if (emailTimerRef.current) clearTimeout(emailTimerRef.current); };
-  }, [showDashboard, activeTab]);
+  }, [showDashboard]);
 
   // Auto-fire market intel as soon as both banks are selected (Option 3)
   useEffect(() => {
