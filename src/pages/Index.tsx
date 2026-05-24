@@ -88,7 +88,7 @@ const Index = () => {
   useEffect(() => {
     if (!showDashboard || activeTab === "ubpr") return;
     if (localStorage.getItem("ps_email_captured")) return;
-    emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 45_000);
+    emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 20_000);
     return () => { if (emailTimerRef.current) clearTimeout(emailTimerRef.current); };
   }, [showDashboard, activeTab]);
 
