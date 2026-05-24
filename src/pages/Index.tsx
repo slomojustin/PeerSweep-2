@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Brain, Users, Globe, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { BankMetrics } from "@/data/bankData";
+import { fetchMarketIntel } from "@/lib/api/marketIntel";
 import type { MarketIntelData } from "@/lib/api/marketIntel";
 
 const DEMO_SUBJECT_BANK: BankInfo = { rssd: "962966", name: "SOFI BANK, NATIONAL ASSOCIATION", city: "Cottonwood Heights", state: "UT" };
@@ -43,6 +44,7 @@ const Index = () => {
   } | null>(null);
   const [showEmailBanner, setShowEmailBanner] = useState(false);
   const emailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const marketIntelFiredRef = useRef(false);
   const { toast } = useToast();
 
   function toQuarterLabel(dateStr: string): string {
@@ -91,6 +93,22 @@ const Index = () => {
     emailTimerRef.current = setTimeout(() => setShowEmailBanner(true), 20_000);
     return () => { if (emailTimerRef.current) clearTimeout(emailTimerRef.current); };
   }, [showDashboard, activeTab]);
+
+  // Auto-fire market intel as soon as both banks are selected (Option 3)
+  useEffect(() => {
+    const subject = subjectBank[0];
+    if (!subject || peerBanks.length === 0) {
+      marketIntelFiredRef.current = false;
+      return;
+    }
+    if (marketIntelFiredRef.current) return;
+    marketIntelFiredRef.current = true;
+    setIsMarketIntelLoading(true);
+    fetchMarketIntel(subject, peerBanks, undefined, undefined, undefined, undefined, undefined, undefined, false)
+      .then(data => { setMarketIntelData(data); })
+      .catch(() => { /* silent fail — user can retry from Market Intel tab */ })
+      .finally(() => setIsMarketIntelLoading(false));
+  }, [subjectBank, peerBanks]);
 
   if (showDashboard && selectedBank) {
     return (
