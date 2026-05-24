@@ -231,10 +231,16 @@ const Index = () => {
                   <Globe className="h-4 w-4" />
                   Market Intel
                   {isMarketIntelLoading && (
-                    <span className="ml-1 h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+                    <span className="ml-1 flex items-center gap-1 text-[10px] font-semibold text-amber-500">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                      Running
+                    </span>
                   )}
                   {!isMarketIntelLoading && marketIntelData && (
-                    <span className="ml-1 h-2 w-2 rounded-full bg-green-500" />
+                    <span className="ml-1 flex items-center gap-1 text-[10px] font-semibold text-green-600">
+                      <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                      Ready
+                    </span>
                   )}
                 </TabsTrigger>
               </TabsList>
