@@ -21,7 +21,7 @@ interface BankSelectorProps {
   maxSelections?: number;
 }
 
-const MAX_RESULTS = 50;
+const MAX_RESULTS = 150;
 
 const BankSelector = ({ label, description, selected, onSelect, multiple = false, maxSelections = 25 }: BankSelectorProps) => {
   const [open, setOpen] = useState(false);
@@ -135,7 +135,7 @@ const BankSelector = ({ label, description, selected, onSelect, multiple = false
                 ))}
                 {filtered.length >= MAX_RESULTS && (
                   <p className="p-2 text-xs text-muted-foreground text-center">
-                    {search.trim() === "" ? `Showing first ${MAX_RESULTS} banks — type to search 60,000+` : `Showing first ${MAX_RESULTS} results — refine your search`}
+                    {search.trim() === "" ? `Showing first ${MAX_RESULTS} banks — type to search all 4,920` : `Showing first ${MAX_RESULTS} results — refine your search`}
                   </p>
                 )}
               </div>
