@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -486,6 +486,11 @@ const MarketResearch = ({ bank, peerBanks, cachedData, onDataLoaded, onLoadingCh
   const abortControllerRef = useRef<AbortController | null>(null);
   const runIdsRef = useRef<string[]>([]);
   const jobIdRef = useRef<string | null>(null);
+
+  // Sync parent-level cached data (e.g. from auto-fire) into local state
+  useEffect(() => {
+    if (cachedData && !isLoading) setCachedResult(cachedData);
+  }, [cachedData]);
 
   const togglePanel = (i: number) =>
     setExpandedPanels(prev => {

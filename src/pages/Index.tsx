@@ -43,9 +43,17 @@ const Index = () => {
     peers: Map<string, QuarterData[] | null>;
   } | null>(null);
   const [showEmailBanner, setShowEmailBanner] = useState(false);
+  const [autoFireDisabled, setAutoFireDisabled] = useState(() => sessionStorage.getItem('ps_disable_autofire') === 'true');
   const emailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const marketIntelFiredRef = useRef(false);
+  const marketIntelFiredKey = useRef('');
   const { toast } = useToast();
+
+  function toggleAutoFire() {
+    const next = !autoFireDisabled;
+    setAutoFireDisabled(next);
+    if (next) sessionStorage.setItem('ps_disable_autofire', 'true');
+    else sessionStorage.removeItem('ps_disable_autofire');
+  }
 
   function toQuarterLabel(dateStr: string): string {
     const d = new Date(dateStr + "T00:00:00");
@@ -97,18 +105,17 @@ const Index = () => {
   // Auto-fire market intel as soon as both banks are selected (Option 3)
   useEffect(() => {
     const subject = subjectBank[0];
-    if (!subject || peerBanks.length === 0) {
-      marketIntelFiredRef.current = false;
-      return;
-    }
-    if (marketIntelFiredRef.current) return;
-    marketIntelFiredRef.current = true;
+    if (!subject || peerBanks.length === 0) return;
+    if (autoFireDisabled) return;
+    const firingKey = `${subject.rssd}:${peerBanks.map(p => p.rssd).sort().join(',')}`;
+    if (marketIntelFiredKey.current === firingKey) return;
+    marketIntelFiredKey.current = firingKey;
     setIsMarketIntelLoading(true);
     fetchMarketIntel(subject, peerBanks, undefined, undefined, undefined, undefined, undefined, undefined, false)
       .then(data => { setMarketIntelData(data); })
       .catch(() => { /* silent fail — user can retry from Market Intel tab */ })
       .finally(() => setIsMarketIntelLoading(false));
-  }, [subjectBank, peerBanks]);
+  }, [subjectBank, peerBanks, autoFireDisabled]);
 
   if (showDashboard && selectedBank) {
     return (
@@ -359,6 +366,20 @@ const Index = () => {
 
       <footer className="border-t py-4 text-center text-xs text-muted-foreground">
         Data sourced from FFIEC CDR • AI-powered analysis • Not a substitute for regulatory examination
+        <span className="ml-4 inline-flex items-center gap-1.5">
+          <span className="opacity-40">|</span>
+          <button
+            onClick={toggleAutoFire}
+            className={cn(
+              "font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+              autoFireDisabled
+                ? "border-red-400/50 text-red-500 bg-red-50/50 hover:bg-red-100/50"
+                : "border-green-400/50 text-green-600 bg-green-50/50 hover:bg-green-100/50"
+            )}
+          >
+            auto-fire {autoFireDisabled ? "OFF" : "ON"}
+          </button>
+        </span>
       </footer>
     </div>
   );
