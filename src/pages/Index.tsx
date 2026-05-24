@@ -296,7 +296,7 @@ const Index = () => {
             ].map(({ icon: Icon, label, tab }) => (
               <button
                 key={label}
-                disabled={!selectedBank || isUbprLoading || peerBanks.length < 6 && !bypassPeerMin}
+                disabled={!selectedBank || isUbprLoading || peerBanks.length < 1}
                 onClick={() => handleNavigate(tab)}
                 className={cn(
                   "p-3 rounded-lg transition-all",
