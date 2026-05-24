@@ -11,6 +11,7 @@ import type { QuarterData } from "@/lib/api/ubprPdf";
 import MarketResearch from "@/components/MarketResearch";
 import EmailCaptureBar from "@/components/EmailCaptureBar";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart3, Brain, Users, Globe, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -166,36 +167,25 @@ const Index = () => {
               {ubprError}
             </div>
           )}
-          {availableQuarters.length > 1 && (activeTab === "ubpr" || activeTab === "peers") && (
+          {availableQuarters.length > 0 && (activeTab === "ubpr" || activeTab === "peers") && (
             <div className="flex items-center gap-2 mb-4">
               <span className="text-xs text-muted-foreground font-medium">Period:</span>
-              {activeTab === "ubpr" && (
-                <button
-                  onClick={() => setSelectedQuarter(null)}
-                  className={cn(
-                    "text-xs rounded-full px-3 py-1 border font-medium transition-colors",
-                    selectedQuarter === null
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
+              <Select
+                value={selectedQuarter ?? "all"}
+                onValueChange={v => setSelectedQuarter(v === "all" ? null : v)}
+              >
+                <SelectTrigger className="h-7 text-xs w-36 rounded-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeTab === "ubpr" && (
+                    <SelectItem value="all">All quarters</SelectItem>
                   )}
-                >
-                  All
-                </button>
-              )}
-              {availableQuarters.map(date => (
-                <button
-                  key={date}
-                  onClick={() => setSelectedQuarter(date)}
-                  className={cn(
-                    "text-xs rounded-full px-3 py-1 border font-medium transition-colors",
-                    selectedQuarter === date
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-muted/50 text-muted-foreground border-border hover:bg-muted",
-                  )}
-                >
-                  {toQuarterLabel(date)}
-                </button>
-              ))}
+                  {availableQuarters.map(date => (
+                    <SelectItem key={date} value={date}>{toQuarterLabel(date)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
