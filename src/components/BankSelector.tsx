@@ -38,21 +38,85 @@ const BankSelector = ({ label, description, selected, onSelect, multiple = false
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return allBanks.slice(0, MAX_RESULTS);
-    const q = search.toLowerCase();
-    const results: BankInfo[] = [];
+    const q = search.trim().toLowerCase();
+    if (!q) return allBanks.slice(0, MAX_RESULTS);
+
+    const STATE_ABBREVS: Record<string, string> = {
+      al: "alabama", ak: "alaska", az: "arizona", ar: "arkansas", ca: "california",
+      co: "colorado", ct: "connecticut", de: "delaware", fl: "florida", ga: "georgia",
+      hi: "hawaii", id: "idaho", il: "illinois", in: "indiana", ia: "iowa",
+      ks: "kansas", ky: "kentucky", la: "louisiana", me: "maine", md: "maryland",
+      ma: "massachusetts", mi: "michigan", mn: "minnesota", ms: "mississippi",
+      mo: "missouri", mt: "montana", ne: "nebraska", nv: "nevada", nh: "new hampshire",
+      nj: "new jersey", nm: "new mexico", ny: "new york", nc: "north carolina",
+      nd: "north dakota", oh: "ohio", ok: "oklahoma", or: "oregon", pa: "pennsylvania",
+      ri: "rhode island", sc: "south carolina", sd: "south dakota", tn: "tennessee",
+      tx: "texas", ut: "utah", vt: "vermont", va: "virginia", wa: "washington",
+      wv: "west virginia", wi: "wisconsin", wy: "wyoming", dc: "district of columbia",
+    };
+
+    const normalize = (s: string) =>
+      s.replace(/\b1st\b/g, "first").replace(/\bfst\b/g, "first")
+       .replace(/\bnatl\b/g, "national").replace(/\bnat'l\b/g, "national")
+       .replace(/\bfed\b/g, "federal").replace(/\bbk\b/g, "bank")
+       .replace(/\bsav\b/g, "savings").replace(/\bn\.a\.?/g, "");
+
+    const qNorm = normalize(q);
+    const tokens = qNorm.split(/\s+/).filter(Boolean);
+
+    const scored: { bank: BankInfo; score: number }[] = [];
+
     for (const bank of allBanks) {
-      if (
-        bank.name.toLowerCase().includes(q) ||
-        bank.rssd.includes(q) ||
-        bank.city.toLowerCase().includes(q) ||
-        bank.state.toLowerCase().includes(q)
-      ) {
-        results.push(bank);
-        if (results.length >= MAX_RESULTS) break;
-      }
+      const nameLow = normalize(bank.name.toLowerCase());
+      const nameWords = nameLow.split(/\s+/);
+      const cityWords = bank.city.toLowerCase().split(/\s+/);
+      const stateLow = bank.state.toLowerCase();
+      const stateFullLow = STATE_ABBREVS[stateLow] ?? stateLow;
+
+      const tokenMatchesName = (token: string) => {
+        const se = STATE_ABBREVS[token] ?? token;
+        return nameWords.some(w => w === token || w.startsWith(token) || w.includes(token))
+          || nameLow.includes(se);
+      };
+      const tokenMatchesMeta = (token: string) => {
+        const se = STATE_ABBREVS[token] ?? token;
+        return bank.rssd === token
+          || cityWords.some(w => w === token || w.startsWith(token))
+          || stateLow === token
+          || stateFullLow.includes(token)
+          || stateFullLow.includes(se);
+      };
+
+      const allMatch = tokens.every(t => tokenMatchesName(t) || tokenMatchesMeta(t));
+      if (!allMatch) continue;
+
+      const nameMatchCount = tokens.filter(t => tokenMatchesName(t)).length;
+      const cityOnlyMatch = nameMatchCount === 0;
+
+      let score = 0;
+
+      // Name-based scoring for the first token
+      const t0 = tokens[0];
+      if (nameLow.startsWith(t0)) score += 100;
+      else if (nameWords[0] === t0) score += 90;        // first word is exact match
+      else if (nameWords.some(w => w === t0)) score += 75;  // any word exact match
+      else if (nameWords.some(w => w.startsWith(t0))) score += 50; // word prefix
+
+      // Full query bonus
+      if (nameLow.startsWith(qNorm)) score += 50;
+      if (nameLow === qNorm) score += 200;
+
+      // Penalize results where name doesn't match at all (city/state/RSSD only)
+      if (cityOnlyMatch) score -= 40;
+
+      // Shorter names rank slightly higher (more specific matches)
+      score -= bank.name.length * 0.1;
+
+      scored.push({ bank, score });
     }
-    return results;
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, MAX_RESULTS).map(s => s.bank);
   }, [search, allBanks]);
 
   const handleSelect = (bank: BankInfo) => {
@@ -133,11 +197,13 @@ const BankSelector = ({ label, description, selected, onSelect, multiple = false
                     </span>
                   </button>
                 ))}
-                {filtered.length >= MAX_RESULTS && (
-                  <p className="p-2 text-xs text-muted-foreground text-center">
-                    {search.trim() === "" ? `Showing first ${MAX_RESULTS} banks — type to search all 4,920` : `Showing first ${MAX_RESULTS} results — refine your search`}
-                  </p>
-                )}
+                <p className="p-2 text-xs text-muted-foreground text-center">
+                  {search.trim() === ""
+                    ? `Showing ${filtered.length} of 4,920 banks — type to search`
+                    : filtered.length >= MAX_RESULTS
+                    ? `Showing first ${MAX_RESULTS} results — refine your search`
+                    : `${filtered.length} result${filtered.length !== 1 ? "s" : ""}`}
+                </p>
               </div>
             )}
           </ScrollArea>
