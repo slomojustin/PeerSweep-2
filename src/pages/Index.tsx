@@ -319,6 +319,17 @@ const Index = () => {
               >
                 load demo preset
               </button>
+              <button
+                onClick={toggleAutoFire}
+                className={cn(
+                  "font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+                  autoFireDisabled
+                    ? "border-red-400/50 text-red-500 bg-red-50/50 hover:bg-red-100/50"
+                    : "border-green-400/50 text-green-600 bg-green-50/50 hover:bg-green-100/50"
+                )}
+              >
+                auto-fire {autoFireDisabled ? "OFF" : "ON"}
+              </button>
             </div>
 
           </div>
@@ -356,20 +367,6 @@ const Index = () => {
 
       <footer className="border-t py-4 text-center text-xs text-muted-foreground">
         Data sourced from FFIEC CDR • AI-powered analysis • Not a substitute for regulatory examination
-        <span className="ml-4 inline-flex items-center gap-1.5">
-          <span className="opacity-40">|</span>
-          <button
-            onClick={toggleAutoFire}
-            className={cn(
-              "font-mono text-[10px] px-1.5 py-0.5 rounded border transition-colors",
-              autoFireDisabled
-                ? "border-red-400/50 text-red-500 bg-red-50/50 hover:bg-red-100/50"
-                : "border-green-400/50 text-green-600 bg-green-50/50 hover:bg-green-100/50"
-            )}
-          >
-            auto-fire {autoFireDisabled ? "OFF" : "ON"}
-          </button>
-        </span>
       </footer>
     </div>
   );
